@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.json
+temu_cookies.json
+test_ali.py
+test_tiendas.py
+debug_tiendas.py
+.pytest_cache/

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados — {{ query }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #17171f;
+      --border: #1e1e2e;
+      --accent: #f0c040;
+      --accent2: #ff6b35;
+      --text: #f0eff4;
+      --muted: #6b6b80;
+      --green: #3ddc97;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(240,192,64,0.05) 0%, transparent 70%);
+      top: -100px; right: -100px;
+      pointer-events: none;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      max-width: 780px;
+      margin: 0 auto 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .back {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    .back:hover { color: var(--accent); }
+
+    .search-mini {
+      flex: 1;
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.4rem 0.4rem 0.4rem 1.2rem;
+      transition: border-color 0.3s;
+    }
+    .search-mini:focus-within { border-color: rgba(240,192,64,0.4); }
+    .search-mini input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+    }
+    .search-mini input::placeholder { color: var(--muted); }
+    .search-mini button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0a0a0f;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.55rem 1.1rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .search-mini button:hover { opacity: 0.85; }
+
+    .results-header {
+      max-width: 780px;
+      margin: 0 auto 1.5rem;
+      animation: fadeUp 0.5s 0.1s ease both;
+      opacity: 0;
+    }
+    .results-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .results-header h2 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .results-header p { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
+
+    .cards {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      transition: border-color 0.3s, transform 0.2s, box-shadow 0.3s;
+      animation: fadeUp 0.5s ease both;
+      opacity: 0;
+    }
+    .card:hover {
+      border-color: #2e2e3e;
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+    .card.mejor {
+      border-color: rgba(240,192,64,0.4);
+      background: linear-gradient(135deg, rgba(240,192,64,0.05), var(--surface));
+    }
+    .card.mejor:hover { border-color: rgba(240,192,64,0.7); }
+
+    .card-img {
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      border-right: 1px solid var(--border);
+      min-height: 160px;
+    }
+    .card-img img {
+      width: 100%;
+      max-width: 120px;
+      height: 120px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .card-img .no-img {
+      width: 80px; height: 80px;
+      background: var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      opacity: 0.4;
+    }
+
+    .card-body { padding: 1.4rem; }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+      gap: 1rem;
+    }
+
+    .rank {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .mejor-badge {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0a0a0f;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .nombre-producto {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .precio-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .precio-final {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .precio-desglose {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .detalles {
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .detalle { display: flex; flex-direction: column; gap: 0.1rem; }
+    .detalle-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .detalle-valor { font-size: 0.9rem; font-weight: 500; }
+    .detalle-valor.gratis { color: var(--green); }
+
+    /* Barra de puntaje */
+    .puntaje-row {
+      margin-bottom: 1rem;
+    }
+    .puntaje-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .puntaje-bar-bg {
+      height: 5px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .puntaje-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--green), var(--accent));
+      transition: width 1s ease;
+    }
+    .card.mejor .puntaje-bar-fill {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    .explicacion {
+      font-size: 0.83rem;
+      color: var(--muted);
+      padding: 0.65rem 0.9rem;
+      background: var(--surface2);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+      border-left: 2px solid var(--border);
+    }
+    .card.mejor .explicacion { border-left-color: var(--accent); }
+
+    .acciones { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .btn-comprar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0a0a0f;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.65rem 1.3rem;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .btn-comprar:hover { opacity: 0.88; transform: scale(0.98); }
+    .btn-ver {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-ver:hover { border-color: var(--muted); color: var(--text); }
+
+    @media (max-width: 560px) {
+      .card { grid-template-columns: 1fr; }
+      .card-img { border-right: none; border-bottom: 1px solid var(--border); min-height: 120px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <a class="back" href="/">← Volver</a>
+    <form class="search-mini" action="/buscar" method="get">
+      <input type="text" name="q" value="{{ query }}" placeholder="Buscar otro producto...">
+      <button type="submit">Comparar</button>
+    </form>
+  </div>
+
+  <div class="results-header">
+    <h2>Resultados para <span>"{{ query }}"</span></h2>
+    <p>{{ resultados|length }} opción{{ 'es encontradas' if resultados|length != 1 else ' encontrada' }} · ordenadas de mejor a peor</p>
+  </div>
+
+  <div class="cards">
+    {% for r in resultados %}
+    {% set puntaje_invertido = (1 - r.puntaje) * 100 %}
+    <div class="card {% if r.es_mejor %}mejor{% endif %}" style="animation-delay: {{ loop.index0 * 0.12 }}s">
+
+      <div class="card-img">
+        {% if r.oferta.imagen_url %}
+          <img src="{{ r.oferta.imagen_url }}" alt="{{ r.oferta.nombre_producto }}" loading="lazy"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="no-img" style="display:none">📦</div>
+        {% else %}
+          <div class="no-img">📦</div>
+        {% endif %}
+      </div>
+
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <div class="rank">#{{ loop.index }} · {{ r.oferta.tienda }}</div>
+          </div>
+          {% if r.es_mejor %}
+          <div class="mejor-badge">⭐ Mejor opción</div>
+          {% endif %}
+        </div>
+
+        {% if r.oferta.nombre_producto %}
+        <div class="nombre-producto">{{ r.oferta.nombre_producto }}</div>
+        {% endif %}
+
+        <div class="precio-row">
+          <div class="precio-final">${{ "{:,.0f}".format(r.oferta.precio_final) }}</div>
+          <div class="precio-desglose">
+            Producto: ${{ "{:,.0f}".format(r.oferta.precio_producto) }}<br>
+            Envío: {% if r.oferta.envio_gratis %}<span style="color:var(--green)">Gratis</span>{% else %}${{ "{:,.0f}".format(r.oferta.costo_envio) }}{% endif %}
+          </div>
+        </div>
+
+        <div class="detalles">
+          <div class="detalle">
+            <span class="detalle-label">Entrega</span>
+            <span class="detalle-valor">{{ r.oferta.tiempo_entrega_dias }} día(s)</span>
+          </div>
+          <div class="detalle">
+            <span class="detalle-label">Disponible</span>
+            <span class="detalle-valor" style="color:var(--green)">✓ Sí</span>
+          </div>
+        </div>
+
+        <div class="puntaje-row">
+          <div class="puntaje-label">
+            <span>Puntuación de conveniencia</span>
+            <span>{{ "%.0f"|format(puntaje_invertido) }}/100</span>
+          </div>
+          <div class="puntaje-bar-bg">
+            <div class="puntaje-bar-fill" style="width: {{ puntaje_invertido }}%"></div>
+          </div>
+        </div>
+
+        <div class="explicacion">{{ r.explicacion }}</div>
+
+        <div class="acciones">
+          <a class="btn-comprar" href="{{ r.oferta.url_compra }}" target="_blank">Comprar en {{ r.oferta.tienda }} →</a>
+          <a class="btn-ver" href="{{ r.oferta.url_compra }}" target="_blank">Ver producto</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</body>
+</html>
