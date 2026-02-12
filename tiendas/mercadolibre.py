@@ -1,57 +1,78 @@
-import requests
-from bs4 import BeautifulSoup
+from driver_config import crear_driver
+from selenium.webdriver.common.by import By
 from models.producto import Oferta
+import time
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
-}
 
 def buscar_productos(query: str, limite: int = 5) -> list:
     url = f"https://listado.mercadolibre.com.co/{query.replace(' ', '-')}"
+    driver = crear_driver()
     ofertas = []
 
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        soup = BeautifulSoup(response.text, "lxml")
+        print(f"  Buscando '{query}' en MercadoLibre...")
+        driver.get(url)
+        time.sleep(3)
 
-        items = soup.select(".ui-search-result")[:limite]
+        items = driver.find_elements(By.CSS_SELECTOR, ".ui-search-result__wrapper")
+        if not items:
+            items = driver.find_elements(By.CSS_SELECTOR, ".poly-card")
 
-        for item in items:
+        print(f"  Se encontraron {len(items)} items en la página")
+
+        for item in items[:limite]:
             try:
-                nombre = item.select_one(".ui-search-item__title").get_text(strip=True)
+                try:
+                    nombre = item.find_element(By.CSS_SELECTOR, ".poly-component__title").text
+                except:
+                    nombre = item.find_element(By.CSS_SELECTOR, ".ui-search-item__title").text
 
-                precio_tag = item.select_one(".andes-money-amount__fraction")
-                precio = float(precio_tag.text.replace(".", "")) if precio_tag else 0.0
+                try:
+                    precio_texto = item.find_element(By.CSS_SELECTOR, ".andes-money-amount__fraction").text
+                    precio = float(precio_texto.replace(".", "").replace(",", ""))
+                except:
+                    precio = 0.0
 
-                link = item.select_one("a.ui-search-link")["href"]
+                try:
+                    envio_elemento = item.find_element(By.CSS_SELECTOR, ".poly-component__shipping")
+                    envio_gratis = "gratis" in envio_elemento.text.lower()
+                except:
+                    envio_gratis = False
 
-                img = item.select_one("img")
-                imagen_url = img["src"] if img else ""
+                try:
+                    url_producto = item.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                except:
+                    url_producto = ""
 
-                envio_gratis = bool(item.select_one(".ui-search-item__shipping--free"))
+                try:
+                    img = item.find_element(By.CSS_SELECTOR, "img")
+                    imagen_url = img.get_attribute("src") or img.get_attribute("data-src") or ""
+                except:
+                    imagen_url = ""
+
                 costo_envio = 0 if envio_gratis else 15000
 
-                ofertas.append(
-                    Oferta(
-                        tienda="MercadoLibre",
-                        precio_producto=precio,
-                        costo_envio=costo_envio,
-                        envio_gratis=envio_gratis,
-                        tiempo_entrega_dias=3 if envio_gratis else 5,
-                        disponible=True,
-                        url_compra=link,
-                        imagen_url=imagen_url,
-                        nombre_producto=nombre
-                    )
+                oferta = Oferta(
+                    tienda="MercadoLibre",
+                    precio_producto=precio,
+                    costo_envio=costo_envio,
+                    envio_gratis=envio_gratis,
+                    tiempo_entrega_dias=3 if envio_gratis else 5,
+                    disponible=True,
+                    url_compra=url_producto,
+                    imagen_url=imagen_url,
+                    nombre_producto=nombre
                 )
-            except:
+                ofertas.append(oferta)
+                print(f"  ✅ {nombre[:50]} — ${precio:,.0f}")
+
+            except Exception as e:
+                print(f"  ⚠️ Error procesando item: {e}")
                 continue
 
     except Exception as e:
-        print("Error MercadoLibre:", e)
+        print(f"  ❌ Error general: {e}")
+    finally:
+        driver.quit()
 
     return ofertas
