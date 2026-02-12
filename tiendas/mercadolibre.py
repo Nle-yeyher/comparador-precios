@@ -10,43 +10,61 @@ def buscar_productos(query: str, limite: int = 5) -> list:
     ofertas = []
 
     try:
-        print(f"  Buscando '{query}' en MercadoLibre...")
+        print(f"🔎 Buscando '{query}' en MercadoLibre...")
         driver.get(url)
-        time.sleep(3)
+        time.sleep(4)
 
-        items = driver.find_elements(By.CSS_SELECTOR, ".ui-search-result__wrapper")
-        if not items:
-            items = driver.find_elements(By.CSS_SELECTOR, ".poly-card")
+        items = driver.find_elements(
+            By.CSS_SELECTOR,
+            ".ui-search-result__wrapper, .poly-card, .ui-search-layout__item"
+        )
 
-        print(f"  Se encontraron {len(items)} items en la página")
+        print(f"🟡 MercadoLibre → items encontrados: {len(items)}")
 
         for item in items[:limite]:
             try:
+                # 📌 Nombre
                 try:
-                    nombre = item.find_element(By.CSS_SELECTOR, ".poly-component__title").text
+                    nombre = item.find_element(
+                        By.CSS_SELECTOR,
+                        ".poly-component__title, .ui-search-item__title"
+                    ).text
                 except:
-                    nombre = item.find_element(By.CSS_SELECTOR, ".ui-search-item__title").text
+                    nombre = "Producto MercadoLibre"
 
+                # 💰 Precio
                 try:
-                    precio_texto = item.find_element(By.CSS_SELECTOR, ".andes-money-amount__fraction").text
-                    precio = float(precio_texto.replace(".", "").replace(",", ""))
+                    precio_texto = item.find_element(
+                        By.CSS_SELECTOR,
+                        ".andes-money-amount__fraction"
+                    ).text
+                    precio = float(precio_texto.replace(".", ""))
                 except:
                     precio = 0.0
 
+                # 🚚 Envío
                 try:
-                    envio_elemento = item.find_element(By.CSS_SELECTOR, ".poly-component__shipping")
-                    envio_gratis = "gratis" in envio_elemento.text.lower()
+                    envio_texto = item.text.lower()
+                    envio_gratis = "gratis" in envio_texto
                 except:
                     envio_gratis = False
 
+                # 🔗 URL
                 try:
-                    url_producto = item.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                    url_producto = item.find_element(
+                        By.TAG_NAME, "a"
+                    ).get_attribute("href")
                 except:
                     url_producto = ""
 
+                # 🖼 Imagen
                 try:
-                    img = item.find_element(By.CSS_SELECTOR, "img")
-                    imagen_url = img.get_attribute("src") or img.get_attribute("data-src") or ""
+                    img = item.find_element(By.TAG_NAME, "img")
+                    imagen_url = (
+                        img.get_attribute("src")
+                        or img.get_attribute("data-src")
+                        or ""
+                    )
                 except:
                     imagen_url = ""
 
@@ -63,15 +81,16 @@ def buscar_productos(query: str, limite: int = 5) -> list:
                     imagen_url=imagen_url,
                     nombre_producto=nombre
                 )
+
                 ofertas.append(oferta)
-                print(f"  ✅ {nombre[:50]} — ${precio:,.0f}")
+                print(f"✅ {nombre[:45]} — ${precio:,.0f}")
 
             except Exception as e:
-                print(f"  ⚠️ Error procesando item: {e}")
-                continue
+                print(f"⚠️ Error procesando producto: {e}")
 
     except Exception as e:
-        print(f"  ❌ Error general: {e}")
+        print(f"❌ Error general MercadoLibre: {e}")
+
     finally:
         driver.quit()
 
