@@ -6,15 +6,9 @@ from selenium.webdriver.edge.options import Options as EdgeOptions
 
 
 def crear_driver():
-    """
-    Crea el driver correcto según el entorno:
-    - Producción (Railway con Docker): Chrome desde imagen selenium/standalone-chrome
-    - Local (Windows): Edge headless
-    """
     en_produccion = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("PORT")
 
     if en_produccion:
-        # En la imagen selenium/standalone-chrome todo está configurado
         options = ChromeOptions()
         options.add_argument("--headless=new")
         options.add_argument("--disable-gpu")
@@ -24,15 +18,12 @@ def crear_driver():
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-        # Chrome y chromedriver vienen en /usr/bin en esta imagen
-        options.binary_location = "/usr/bin/google-chrome"
-        service = ChromeService(executable_path="/usr/bin/chromedriver")
-
-        print(f"[Producción] Usando Chrome desde imagen Docker")
+        service = ChromeService(executable_path="/usr/local/bin/chromedriver")
+        
+        print(f"[Producción] Chrome configurado")
         return webdriver.Chrome(service=service, options=options)
 
     else:
-        # Entorno local con Edge
         options = EdgeOptions()
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
