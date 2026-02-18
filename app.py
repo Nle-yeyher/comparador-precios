@@ -4,7 +4,6 @@ from tiendas.falabella import buscar_productos as buscar_falabella
 from tiendas.amazon import buscar_productos as buscar_amazon
 from comparador.comparar import comparar_producto
 from models.producto import Producto
-import concurrent.futures
 import subprocess
 import os
 
@@ -12,23 +11,27 @@ app = Flask(__name__)
 
 
 def buscar_en_todas(query: str):
+    """Busca en todas las tiendas SECUENCIALMENTE para ahorrar memoria."""
     todas_las_ofertas = []
 
-    def buscar_tienda(func, nombre):
-        try:
-            return func(query, limite=3)
-        except Exception as e:
-            print(f"  Error en {nombre}: {e}")
-            return []
+    # Buscar una tienda a la vez para no sobrecargar RAM
+    try:
+        ofertas_ml = buscar_ml(query, limite=3)
+        todas_las_ofertas += ofertas_ml
+    except Exception as e:
+        print(f"Error en MercadoLibre: {e}")
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        futuro_ml = executor.submit(buscar_tienda, buscar_ml, "MercadoLibre")
-        futuro_fb = executor.submit(buscar_tienda, buscar_falabella, "Falabella")
-        futuro_az = executor.submit(buscar_tienda, buscar_amazon, "Amazon")
+    try:
+        ofertas_fb = buscar_falabella(query, limite=3)
+        todas_las_ofertas += ofertas_fb
+    except Exception as e:
+        print(f"Error en Falabella: {e}")
 
-        todas_las_ofertas += futuro_ml.result()
-        todas_las_ofertas += futuro_fb.result()
-        todas_las_ofertas += futuro_az.result()
+    try:
+        ofertas_az = buscar_amazon(query, limite=3)
+        todas_las_ofertas += ofertas_az
+    except Exception as e:
+        print(f"Error en Amazon: {e}")
 
     return todas_las_ofertas
 
@@ -53,7 +56,7 @@ def buscar():
     if not ofertas:
         return render_template("index.html", error="No se encontraron resultados para tu búsqueda.")
 
-    # Aplicar filtros de precio si existen
+    # Aplicar filtros de precio
     if precio_min is not None:
         ofertas = [o for o in ofertas if o.precio_final >= precio_min]
     if precio_max is not None:
@@ -67,7 +70,6 @@ def buscar():
 
     resultados = comparar_producto(producto)
 
-    # Calcular rango de precios para los filtros
     precios = [r['oferta'].precio_final for r in resultados]
     precio_min_disponible = int(min(precios)) if precios else 0
     precio_max_disponible = int(max(precios)) if precios else 0
@@ -85,9 +87,7 @@ def buscar():
 
 @app.route("/diagnostico")
 def diagnostico():
-    """Endpoint para verificar qué hay instalado en el servidor."""
     info = {}
-
     for cmd in ["chromium", "chromium-browser", "google-chrome", "chromedriver"]:
         try:
             r = subprocess.run(["which", cmd], capture_output=True, text=True)
