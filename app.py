@@ -1,16 +1,17 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from tiendas.mercadolibre import buscar_productos as buscar_ml
 from tiendas.falabella import buscar_productos as buscar_falabella
 from tiendas.amazon import buscar_productos as buscar_amazon
 from comparador.comparar import comparar_producto
 from models.producto import Producto
 import concurrent.futures
+import subprocess
+import os
 
 app = Flask(__name__)
 
 
 def buscar_en_todas(query: str):
-    """Busca en todas las tiendas en paralelo para mayor velocidad."""
     todas_las_ofertas = []
 
     def buscar_tienda(func, nombre):
@@ -44,13 +45,7 @@ def buscar():
     if not query:
         return render_template("index.html", error="Escribe un producto para buscar.")
 
-    producto = Producto(
-        nombre=query,
-        marca="",
-        modelo="",
-        categoria="General"
-    )
-
+    producto = Producto(nombre=query, marca="", modelo="", categoria="General")
     ofertas = buscar_en_todas(query)
 
     if not ofertas:
@@ -60,8 +55,34 @@ def buscar():
         producto.agregar_oferta(oferta)
 
     resultados = comparar_producto(producto)
-
     return render_template("resultados.html", query=query, resultados=resultados)
+
+
+@app.route("/diagnostico")
+def diagnostico():
+    """Endpoint para verificar qué hay instalado en el servidor."""
+    info = {}
+
+    for cmd in ["chromium", "chromium-browser", "google-chrome", "chromedriver"]:
+        try:
+            r = subprocess.run(["which", cmd], capture_output=True, text=True)
+            info[cmd] = r.stdout.strip() or "no encontrado"
+        except:
+            info[cmd] = "error"
+
+    try:
+        r = subprocess.run(
+            ["find", "/nix", "-name", "chromium", "-type", "f"],
+            capture_output=True, text=True, timeout=5
+        )
+        info["nix_chromium"] = r.stdout.strip()[:200] or "no encontrado"
+    except:
+        info["nix_chromium"] = "error"
+
+    info["env_port"] = os.environ.get("PORT", "no definido")
+    info["env_railway"] = os.environ.get("RAILWAY_ENVIRONMENT", "no definido")
+
+    return jsonify(info)
 
 
 if __name__ == "__main__":
