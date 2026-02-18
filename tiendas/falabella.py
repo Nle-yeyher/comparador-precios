@@ -13,9 +13,9 @@ def buscar_productos(query: str, limite: int = 5) -> list:
     try:
         print(f"  Buscando '{query}' en Falabella...")
         driver.get(url)
-        time.sleep(6)  # Reducido de 10 a 6
-        driver.execute_script("window.scrollTo(0, 800);")
-        time.sleep(1)  # Reducido de 3 a 1
+        time.sleep(10)
+        driver.execute_script("window.scrollTo(0, 1000);")
+        time.sleep(3)
 
         items = driver.find_elements(By.CSS_SELECTOR, "div[class*='pod-4_GRID'], li[class*='pod-4_GRID']")
         if not items:

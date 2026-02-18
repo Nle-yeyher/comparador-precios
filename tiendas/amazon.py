@@ -39,7 +39,7 @@ def buscar_productos(query: str, limite: int = 5) -> list:
     try:
         print(f"  Buscando '{query}' en Amazon...")
         driver.get(url)
-        time.sleep(3)  # Reducido de 4 a 3
+        time.sleep(4)
 
         items = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
         print(f"  Se encontraron {len(items)} items en Amazon")
