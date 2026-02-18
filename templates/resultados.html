@@ -44,7 +44,7 @@
 
     .header {
       max-width: 780px;
-      margin: 0 auto 2.5rem;
+      margin: 0 auto 2rem;
       display: flex;
       align-items: center;
       gap: 1.5rem;
@@ -97,10 +97,127 @@
     }
     .search-mini button:hover { opacity: 0.85; }
 
-    .results-header {
+    .results-wrapper {
       max-width: 780px;
-      margin: 0 auto 1.5rem;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    /* Filtros sidebar */
+    .filters-sidebar {
+      position: sticky;
+      top: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
       animation: fadeUp 0.5s 0.1s ease both;
+      opacity: 0;
+    }
+
+    .filters-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .filter-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.6rem;
+      display: block;
+    }
+
+    .filter-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      padding: 0.6rem 0.8rem;
+      margin-bottom: 0.5rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-input:focus {
+      border-color: rgba(240,192,64,0.4);
+    }
+
+    .filter-input::placeholder {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .filter-btn {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0a0a0f;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.7rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .filter-btn:hover {
+      opacity: 0.9;
+    }
+
+    .clear-filters {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 0.5rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .clear-filters:hover {
+      border-color: var(--muted);
+      color: var(--text);
+    }
+
+    .price-range-display {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    /* Resultados */
+    .results-content {
+      min-width: 0;
+    }
+
+    .results-header {
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.5s 0.2s ease both;
       opacity: 0;
     }
     .results-header h2 {
@@ -117,8 +234,6 @@
     .results-header p { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
 
     .cards {
-      max-width: 780px;
-      margin: 0 auto;
       display: flex;
       flex-direction: column;
       gap: 1.2rem;
@@ -250,7 +365,6 @@
     .detalle-valor { font-size: 0.9rem; font-weight: 500; }
     .detalle-valor.gratis { color: var(--green); }
 
-    /* Barra de puntaje */
     .puntaje-row {
       margin-bottom: 1rem;
     }
@@ -319,6 +433,16 @@
     }
     .btn-ver:hover { border-color: var(--muted); color: var(--text); }
 
+    @media (max-width: 860px) {
+      .results-wrapper {
+        grid-template-columns: 1fr;
+      }
+      .filters-sidebar {
+        position: relative;
+        top: 0;
+      }
+    }
+
     @media (max-width: 560px) {
       .card { grid-template-columns: 1fr; }
       .card-img { border-right: none; border-bottom: 1px solid var(--border); min-height: 120px; }
@@ -335,78 +459,125 @@
     </form>
   </div>
 
-  <div class="results-header">
-    <h2>Resultados para <span>"{{ query }}"</span></h2>
-    <p>{{ resultados|length }} opción{{ 'es encontradas' if resultados|length != 1 else ' encontrada' }} · ordenadas de mejor a peor</p>
-  </div>
+  <div class="results-wrapper">
+    <!-- Filtros sidebar -->
+    <aside class="filters-sidebar">
+      <div class="filters-title">🔍 Filtros</div>
+      
+      <form action="/buscar" method="get">
+        <input type="hidden" name="q" value="{{ query }}">
+        
+        <div class="filter-section">
+          <label class="filter-label">Precio mínimo</label>
+          <input 
+            type="number" 
+            name="precio_min" 
+            class="filter-input" 
+            placeholder="$0"
+            value="{{ filtro_min or '' }}"
+            min="0"
+          >
+        </div>
 
-  <div class="cards">
-    {% for r in resultados %}
-    {% set puntaje_invertido = (1 - r.puntaje) * 100 %}
-    <div class="card {% if r.es_mejor %}mejor{% endif %}" style="animation-delay: {{ loop.index0 * 0.12 }}s">
+        <div class="filter-section">
+          <label class="filter-label">Precio máximo</label>
+          <input 
+            type="number" 
+            name="precio_max" 
+            class="filter-input" 
+            placeholder="Sin límite"
+            value="{{ filtro_max or '' }}"
+            min="0"
+          >
+          <div class="price-range-display">
+            Rango disponible: ${{ "{:,.0f}".format(precio_min_disponible) }} - ${{ "{:,.0f}".format(precio_max_disponible) }}
+          </div>
+        </div>
 
-      <div class="card-img">
-        {% if r.oferta.imagen_url %}
-          <img src="{{ r.oferta.imagen_url }}" alt="{{ r.oferta.nombre_producto }}" loading="lazy"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-          <div class="no-img" style="display:none">📦</div>
-        {% else %}
-          <div class="no-img">📦</div>
+        <button type="submit" class="filter-btn">Aplicar filtros</button>
+        
+        {% if filtro_min or filtro_max %}
+        <a href="/buscar?q={{ query }}" class="clear-filters" style="display:block; text-align:center; text-decoration:none;">Limpiar filtros</a>
         {% endif %}
+      </form>
+    </aside>
+
+    <!-- Resultados -->
+    <div class="results-content">
+      <div class="results-header">
+        <h2>Resultados para <span>"{{ query }}"</span></h2>
+        <p>{{ resultados|length }} opción{{ 'es encontradas' if resultados|length != 1 else ' encontrada' }} · ordenadas de mejor a peor</p>
       </div>
 
-      <div class="card-body">
-        <div class="card-top">
-          <div>
-            <div class="rank">#{{ loop.index }} · {{ r.oferta.tienda }}</div>
+      <div class="cards">
+        {% for r in resultados %}
+        {% set puntaje_invertido = (1 - r.puntaje) * 100 %}
+        <div class="card {% if r.es_mejor %}mejor{% endif %}" style="animation-delay: {{ loop.index0 * 0.12 }}s">
+
+          <div class="card-img">
+            {% if r.oferta.imagen_url %}
+              <img src="{{ r.oferta.imagen_url }}" alt="{{ r.oferta.nombre_producto }}" loading="lazy"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+              <div class="no-img" style="display:none">📦</div>
+            {% else %}
+              <div class="no-img">📦</div>
+            {% endif %}
           </div>
-          {% if r.es_mejor %}
-          <div class="mejor-badge">⭐ Mejor opción</div>
-          {% endif %}
+
+          <div class="card-body">
+            <div class="card-top">
+              <div>
+                <div class="rank">#{{ loop.index }} · {{ r.oferta.tienda }}</div>
+              </div>
+              {% if r.es_mejor %}
+              <div class="mejor-badge">⭐ Mejor opción</div>
+              {% endif %}
+            </div>
+
+            {% if r.oferta.nombre_producto %}
+            <div class="nombre-producto">{{ r.oferta.nombre_producto }}</div>
+            {% endif %}
+
+            <div class="precio-row">
+              <div class="precio-final">${{ "{:,.0f}".format(r.oferta.precio_final) }}</div>
+              <div class="precio-desglose">
+                Producto: ${{ "{:,.0f}".format(r.oferta.precio_producto) }}<br>
+                Envío: {% if r.oferta.envio_gratis %}<span style="color:var(--green)">Gratis</span>{% else %}${{ "{:,.0f}".format(r.oferta.costo_envio) }}{% endif %}
+              </div>
+            </div>
+
+            <div class="detalles">
+              <div class="detalle">
+                <span class="detalle-label">Entrega</span>
+                <span class="detalle-valor">{{ r.oferta.tiempo_entrega_dias }} día(s)</span>
+              </div>
+              <div class="detalle">
+                <span class="detalle-label">Disponible</span>
+                <span class="detalle-valor" style="color:var(--green)">✓ Sí</span>
+              </div>
+            </div>
+
+            <div class="puntaje-row">
+              <div class="puntaje-label">
+                <span>Puntuación de conveniencia</span>
+                <span>{{ "%.0f"|format(puntaje_invertido) }}/100</span>
+              </div>
+              <div class="puntaje-bar-bg">
+                <div class="puntaje-bar-fill" style="width: {{ puntaje_invertido }}%"></div>
+              </div>
+            </div>
+
+            <div class="explicacion">{{ r.explicacion }}</div>
+
+            <div class="acciones">
+              <a class="btn-comprar" href="{{ r.oferta.url_compra }}" target="_blank">Comprar en {{ r.oferta.tienda }} →</a>
+              <a class="btn-ver" href="{{ r.oferta.url_compra }}" target="_blank">Ver producto</a>
+            </div>
+          </div>
         </div>
-
-        {% if r.oferta.nombre_producto %}
-        <div class="nombre-producto">{{ r.oferta.nombre_producto }}</div>
-        {% endif %}
-
-        <div class="precio-row">
-          <div class="precio-final">${{ "{:,.0f}".format(r.oferta.precio_final) }}</div>
-          <div class="precio-desglose">
-            Producto: ${{ "{:,.0f}".format(r.oferta.precio_producto) }}<br>
-            Envío: {% if r.oferta.envio_gratis %}<span style="color:var(--green)">Gratis</span>{% else %}${{ "{:,.0f}".format(r.oferta.costo_envio) }}{% endif %}
-          </div>
-        </div>
-
-        <div class="detalles">
-          <div class="detalle">
-            <span class="detalle-label">Entrega</span>
-            <span class="detalle-valor">{{ r.oferta.tiempo_entrega_dias }} día(s)</span>
-          </div>
-          <div class="detalle">
-            <span class="detalle-label">Disponible</span>
-            <span class="detalle-valor" style="color:var(--green)">✓ Sí</span>
-          </div>
-        </div>
-
-        <div class="puntaje-row">
-          <div class="puntaje-label">
-            <span>Puntuación de conveniencia</span>
-            <span>{{ "%.0f"|format(puntaje_invertido) }}/100</span>
-          </div>
-          <div class="puntaje-bar-bg">
-            <div class="puntaje-bar-fill" style="width: {{ puntaje_invertido }}%"></div>
-          </div>
-        </div>
-
-        <div class="explicacion">{{ r.explicacion }}</div>
-
-        <div class="acciones">
-          <a class="btn-comprar" href="{{ r.oferta.url_compra }}" target="_blank">Comprar en {{ r.oferta.tienda }} →</a>
-          <a class="btn-ver" href="{{ r.oferta.url_compra }}" target="_blank">Ver producto</a>
-        </div>
+        {% endfor %}
       </div>
     </div>
-    {% endfor %}
   </div>
 
 </body>

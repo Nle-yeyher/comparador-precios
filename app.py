@@ -41,6 +41,8 @@ def index():
 @app.route("/buscar")
 def buscar():
     query = request.args.get("q", "").strip()
+    precio_min = request.args.get("precio_min", type=int)
+    precio_max = request.args.get("precio_max", type=int)
 
     if not query:
         return render_template("index.html", error="Escribe un producto para buscar.")
@@ -51,11 +53,34 @@ def buscar():
     if not ofertas:
         return render_template("index.html", error="No se encontraron resultados para tu búsqueda.")
 
+    # Aplicar filtros de precio si existen
+    if precio_min is not None:
+        ofertas = [o for o in ofertas if o.precio_final >= precio_min]
+    if precio_max is not None:
+        ofertas = [o for o in ofertas if o.precio_final <= precio_max]
+
+    if not ofertas:
+        return render_template("index.html", error="No hay resultados con esos filtros de precio.")
+
     for oferta in ofertas:
         producto.agregar_oferta(oferta)
 
     resultados = comparar_producto(producto)
-    return render_template("resultados.html", query=query, resultados=resultados)
+
+    # Calcular rango de precios para los filtros
+    precios = [r['oferta'].precio_final for r in resultados]
+    precio_min_disponible = int(min(precios)) if precios else 0
+    precio_max_disponible = int(max(precios)) if precios else 0
+
+    return render_template(
+        "resultados.html",
+        query=query,
+        resultados=resultados,
+        precio_min_disponible=precio_min_disponible,
+        precio_max_disponible=precio_max_disponible,
+        filtro_min=precio_min,
+        filtro_max=precio_max
+    )
 
 
 @app.route("/diagnostico")
