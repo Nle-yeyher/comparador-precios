@@ -1,32 +1,28 @@
-FROM python:3.11-slim
+# Usar imagen base con Python y Chrome
+FROM selenium/standalone-chrome:latest
 
-# Instalar dependencias del sistema y Chrome
+USER root
+
+# Instalar Python y dependencias
 RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    unzip \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar chromedriver
-RUN CHROMEDRIVER_VERSION=`curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE` && \
-    wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip && \
-    unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
-    rm /tmp/chromedriver.zip && \
-    chmod +x /usr/local/bin/chromedriver
-
+# Crear directorio de trabajo
 WORKDIR /app
 
+# Copiar archivos
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Variable de entorno para el puerto
 ENV PORT=8080
 
+# Exponer puerto
 EXPOSE 8080
 
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
+# Comando para iniciar la aplicación
+CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
