@@ -1,14 +1,12 @@
 [phases.setup]
 nixPkgs = [
   "chromium",
-  "chromedriver",
+  "chromiumDrv",
   "glib",
   "nss",
   "nspr",
   "atk",
   "cups",
-  "dbus",
-  "expat",
   "libdrm",
   "libxkbcommon",
   "xorg.libX11",
@@ -19,20 +17,17 @@ nixPkgs = [
   "xorg.libXrandr",
   "xorg.libxcb",
   "mesa",
-  "alsa-lib",
   "pango",
   "cairo",
-  "xorg.libXcursor",
-  "xorg.libXi",
-  "xorg.libXrender",
-  "xorg.libXtst",
   "at-spi2-atk",
   "at-spi2-core",
-  "gtk3"
+  "gtk3",
+  "expat",
+  "alsa-lib"
 ]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
 
 [start]
-cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
+cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120"
